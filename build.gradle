@@ -1,9 +1,15 @@
 plugins {
     id 'java'
+    id "io.freefair.lombok" version "8.4"
 }
 
 group = 'ru.clevertec'
 version = '1.0-SNAPSHOT'
+
+java {
+    sourceCompatibility = JavaLanguageVersion.of(17)
+    targetCompatibility = JavaLanguageVersion.of(17)
+}
 
 repositories {
     mavenCentral()
