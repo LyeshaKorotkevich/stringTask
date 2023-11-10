@@ -112,7 +112,6 @@ public class Main {
             System.out.println(player);
             Player player1 = (Player) JsonConverter.fromJson(str, Player.class);
             System.out.println(player1);
-            //TODO не работет с null
 //            String str = mapper.writeValueAsString(teamA1);
 //            Team player = mapper.readValue(str, Team.class);
 //            System.out.println(player);

@@ -133,7 +133,7 @@ public class JsonConverter {
         Map<String, Object> map = new HashMap<>();
 
         Pattern pattern = Pattern.compile(
-                "(\"\\w+\" ?: ?\"?[\\w. \\-,]+\"?)"
+                "(\"\\w+\" ?: ?\"?[\\w. \\-,]+\\b\"?)"
         );
         //TODO вложенность
         Matcher matcher = pattern.matcher(json);
