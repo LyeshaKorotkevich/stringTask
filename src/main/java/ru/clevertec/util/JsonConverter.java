@@ -1,6 +1,9 @@
 package ru.clevertec.util;
 
+import ru.clevertec.model.Player;
+
 import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
@@ -108,6 +111,9 @@ public class JsonConverter {
 
 
     public static Object fromJson(String json, Class<?> clazz) {
+        if (json == null) {
+            return null;
+        }
         try {
             Object obj = clazz.getDeclaredConstructor().newInstance();
             Map<String, Object> map = parseToMap(json);
@@ -121,7 +127,6 @@ public class JsonConverter {
                     setFieldValue(obj, field, value);
                 }
             }
-            // System.out.println(map);
             return obj;
         } catch (Exception e) {
             e.printStackTrace();
@@ -131,53 +136,111 @@ public class JsonConverter {
 
     private static Map<String, Object> parseToMap(String json) {
         Map<String, Object> map = new HashMap<>();
-
-        Pattern pattern = Pattern.compile(
-                "(\"\\w+\" ?: ?\"?[\\w. \\-,]+\\b\"?)"
-        );
-        //TODO вложенность
+        Pattern pattern = Pattern.compile("\"(.*?)\"\\s*:\\s*(\\{.*?\\}|\".*?\"|\\d+|\\[.*?\\]|null|true|false)");
         Matcher matcher = pattern.matcher(json);
+
         while (matcher.find()) {
-            String[] keyVal = matcher.group().split(" ?: ?");
-            String key = keyVal[0].substring(1, keyVal[0].length()-1);
-            String value = keyVal[1];
-            if (value.startsWith("\"") && value.endsWith("\"")) {
-                value = value.substring(1, value.length() - 1);
-            }
+            String key = matcher.group(1);
+            String valueString = matcher.group(2);
+            Object value = parseValue(valueString);
             map.put(key, value);
         }
+
         return map;
+    }
+
+    private static Object parseValue(String valueString) {
+
+        if (valueString.startsWith("\"") && valueString.endsWith("\"")) {
+            return valueString.substring(1, valueString.length() - 1);
+        } else if (valueString.startsWith("{") && valueString.endsWith("}")) {
+            return parseToMap(valueString);
+        } else if (valueString.startsWith("[") && valueString.endsWith("]")) {
+            return parseToList(valueString);
+        }
+        return valueString.trim();
+    }
+
+    private static List<Object> parseToList(String arrayString) {
+        List<Object> list = new ArrayList<>();
+        String content = arrayString.substring(1, arrayString.length() - 1);
+        Matcher matcher = Pattern.compile("(\\{.*?\\}|\".*?\"|\\d+)").matcher(content);
+
+        while (matcher.find()) {
+            String elementString = matcher.group(1);
+            list.add(parseValue(elementString.trim()));
+        }
+
+        return list;
     }
 
     private static void setFieldValue(Object obj, Field field, Object value) throws IllegalAccessException {
         if (value == null) {
             field.set(obj, null);
-        } else {
+        }else {
             Class<?> fieldType = field.getType();
-            switch (fieldType.getSimpleName()) {
-                case "String":
-                    field.set(obj, value.toString());
-                    break;
-                case "Integer":
-                case "int":
-                    field.set(obj, Integer.parseInt(value.toString()));
-                    break;
-                case "UUID":
-                    field.set(obj, UUID.fromString(value.toString()));
-                    break;
-                case "LocalDate":
-                    field.set(obj, LocalDate.parse(value.toString()));
-                    break;
-                case "OffsetDateTime":
-                    field.set(obj, OffsetDateTime.parse(value.toString()));
-                    break;
-                case "ZonedDateTime":
-                    field.set(obj, ZonedDateTime.parse(value.toString()));
-                    break;
-                    //TODO еще классы
-                default:
-                    throw new IllegalArgumentException("Unsupported field type: " + fieldType.getSimpleName());
+            if (fieldType.isAssignableFrom(List.class)) {
+                ParameterizedType listType = (ParameterizedType) field.getGenericType();
+                Class<?> listElementType = (Class<?>) listType.getActualTypeArguments()[0];
+                List<Object> listValue = new ArrayList<>();
+                for (Object element : (List<?>) value) {
+                    listValue.add(parseElement(listElementType, element));
+                }
+                field.set(obj, listValue);
+            } else {
+                field.set(obj, parseElement(fieldType, value));
             }
         }
     }
+
+    private static Object parseElement(Class<?> elementType, Object elementValue) {
+        if (elementValue == null) {
+            return null;
+        }
+
+        if (elementValue instanceof Map) {
+            Map<?, ?> elementMap = (Map<?, ?>) elementValue;
+            Object instance = null;
+            try {
+                instance = elementType.getDeclaredConstructor().newInstance();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            if (instance != null) {
+                for (Field field : elementType.getDeclaredFields()) {
+                    field.setAccessible(true);
+                    String fieldName = field.getName();
+                    if (elementMap.containsKey(fieldName)) {
+                        Object fieldValue = elementMap.get(fieldName);
+                        try {
+                            setFieldValue(instance, field, fieldValue);
+                        } catch (IllegalAccessException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+
+            return instance;
+        }
+
+        return switch (elementType.getSimpleName()) {
+            case "String" -> elementValue.toString();
+            case "Byte", "byte" -> Byte.parseByte(elementValue.toString());
+            case "Short", "short" -> Short.parseShort(elementValue.toString());
+            case "Integer", "int" -> Integer.parseInt(elementValue.toString());
+            case "Long", "long" -> Long.parseLong(elementValue.toString());
+            case "Float", "float" -> Float.parseFloat(elementValue.toString());
+            case "Double", "double" -> Double.parseDouble(elementValue.toString());
+            case "Character", "char" -> elementValue.toString().charAt(0);
+            case "Boolean", "bool" -> Boolean.parseBoolean(elementValue.toString());
+            case "UUID" -> UUID.fromString(elementValue.toString());
+            case "LocalDate" -> LocalDate.parse(elementValue.toString());
+            case "OffsetDateTime" -> OffsetDateTime.parse(elementValue.toString());
+            case "ZonedDateTime" -> ZonedDateTime.parse(elementValue.toString());
+            default -> throw new IllegalArgumentException("Unsupported field type: " + elementType.getSimpleName());
+        };
+    }
+
 }

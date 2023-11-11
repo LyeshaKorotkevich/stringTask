@@ -107,15 +107,23 @@ public class Main {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
         try {
-            String str = mapper.writeValueAsString(playerA1);
-            Player player = mapper.readValue(str, Player.class);
-            System.out.println(player);
-            Player player1 = (Player) JsonConverter.fromJson(str, Player.class);
-            System.out.println(player1);
-//            String str = mapper.writeValueAsString(teamA1);
-//            Team player = mapper.readValue(str, Team.class);
+//            String str = mapper.writeValueAsString(playerA1);
+//            Player player = mapper.readValue(str, Player.class);
 //            System.out.println(player);
-//            Team player1 = (Team) JsonConverter.fromJson(str, Team.class);
+//            Player player1 = (Player) JsonConverter.fromJson(str, Player.class);
+//            System.out.println(player1);
+
+            String str = mapper.writeValueAsString(teamA1);
+            Team player = mapper.readValue(str, Team.class);
+            System.out.println(player);
+            Team player1 = (Team) JsonConverter.fromJson(str, Team.class);
+            System.out.println(player1);
+            //TODO осталось сделать Map
+
+//            String str = mapper.writeValueAsString(championsLeague);
+//            ChampionsLeague player = mapper.readValue(str, ChampionsLeague.class);
+//            System.out.println(player);
+//            ChampionsLeague player1 = (ChampionsLeague) JsonConverter.fromJson(str, ChampionsLeague.class);
 //            System.out.println(player1);
         } catch (IOException e) {
             throw new RuntimeException(e);
