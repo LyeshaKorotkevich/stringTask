@@ -49,7 +49,7 @@ public class PlayerTestData {
                         .build().buildPlayer(),
                 PlayerTestData.builder()
                         .withId(UUID.fromString("4a0e67d3-48b0-4a36-b741-9f2ac75821d3"))
-                        .withName("Cristiano")
+                        .withName(null)
                         .withSurname("Ronaldo")
                         .withDateBirth(LocalDate.of(1985, 2, 5))
                         .withNumber(7)

@@ -10,6 +10,8 @@ import ru.clevertec.model.ChampionsLeague;
 import ru.clevertec.model.Player;
 import ru.clevertec.model.Team;
 import ru.clevertec.util.testData.ChampionsLeagueTestData;
+import ru.clevertec.util.testData.PlayerTestData;
+import ru.clevertec.util.testData.TeamTestData;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -61,5 +63,48 @@ class JsonConverterTest {
 
     }
 
+    @Nested
+    class FromJsonTest {
+
+        @Test
+        void fromJsonShouldReturnPlayerObject() throws JsonProcessingException {
+            // given
+            Player expected = PlayerTestData.builder().build().buildPlayer();
+            String json = mapper.writeValueAsString(expected);
+
+            // when
+            Player actual = (Player) JsonConverter.fromJson(json, Player.class);
+
+            // then
+            assertEquals(expected, actual);
+        }
+
+        @Test
+        void fromJsonShouldReturnTeamObject() throws JsonProcessingException {
+            // given
+            Team expected = TeamTestData.builder().build().buildTeam();
+            String json = mapper.writeValueAsString(expected);
+
+            // when
+            Team actual = (Team) JsonConverter.fromJson(json, Team.class);
+
+            // then
+            assertEquals(expected, actual);
+        }
+
+        @Test
+        void fromJsonShouldReturnChampionsLeagueObject() throws JsonProcessingException {
+            // given
+            ChampionsLeague expected = ChampionsLeagueTestData.builder().build().buildChampionsLeague();
+            String json = mapper.writeValueAsString(expected);
+
+            // when
+            ChampionsLeague actual = (ChampionsLeague) JsonConverter.fromJson(json, ChampionsLeague.class);
+
+            // then
+            assertEquals(expected, actual);
+        }
+
+    }
 
 }

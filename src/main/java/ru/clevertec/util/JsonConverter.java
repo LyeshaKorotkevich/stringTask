@@ -1,7 +1,5 @@
 package ru.clevertec.util;
 
-import ru.clevertec.model.Player;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.time.LocalDate;
@@ -107,9 +105,6 @@ public class JsonConverter {
         return toJson(obj);
     }
 
-    //{"id":"8cd1a26f-2fb0-48db-9da9-3d55cd962538","dateStart":"2023-11-07T12:34:56.000+0000","groups":{"A":[{"id":"ab649309-170a-4061-8b9a-79a7d94721c7","name":"Team A1","country":"Country A","players":[{"id":"ca0abcb0-c6e9-40cd-88b9-10b00975653c","name":"Player A1","surname":"Surname A1","dateBirth":"1990-01-01","number":7},{"id":"ea7902cc-b84c-4a88-816f-e13e790bbc57","name":"Player A2","surname":"Surname A2","dateBirth":"1992-05-15","number":10}]},{"id":"baf89272-073f-49c4-9059-64a196532986","name":"Team A2","country":"Country A","players":[{"id":"4a28f7f8-d915-4a9a-b834-e274b5658345","name":"Player A3","surname":"Surname A3","dateBirth":"1988-11-30","number":5},{"id":"d82498de-359b-4524-9420-6ec5426b17b7","name":"Player A4","surname":"Surname A4","dateBirth":"1993-07-20","number":9}]}],"B":[{"id":"1ac11052-e13a-4a54-92c0-1f9c933bc2f8","name":"Team B1","country":"Country B","players":[{"id":"8e3fd4ee-2d7a-4744-98a2-61835ad26b74","name":"Player B1","surname":"Surname B1","dateBirth":"1991-04-10","number":8},{"id":"66b0d93a-0b08-4ddf-b0a6-3b43c784b3f7","name":"Player B2","surname":"Surname B2","dateBirth":"1989-08-25","number":11}]},{"id":"f6f5cf8c-b64c-48e8-8fdf-fdedc7816ae6","name":"Team B2","country":"Country B","players":[{"id":"d7050647-3157-44cb-ab04-92b68290f217","name":"Player B3","surname":"Surname B3","dateBirth":"1994-02-28","number":6},{"id":"139f3bac-9924-4814-a80e-bd633e9316c2","name":"Player B4","surname":"Surname B4","dateBirth":"1995-09-05","number":12}]}]}}
-
-
     public static Object fromJson(String json, Class<?> clazz) {
         if (json == null) {
             return null;
@@ -136,6 +131,9 @@ public class JsonConverter {
 
     private static Map<String, Object> parseToMap(String json) {
         Map<String, Object> map = new HashMap<>();
+        Deque<Map<String, Object>> deque = new ArrayDeque<>();
+        deque.push(map);
+
         Pattern pattern = Pattern.compile("\"(.*?)\"\\s*:\\s*(\\{.*?\\}|\".*?\"|\\d+|\\[.*?\\]|null|true|false)");
         Matcher matcher = pattern.matcher(json);
 
@@ -143,11 +141,34 @@ public class JsonConverter {
             String key = matcher.group(1);
             String valueString = matcher.group(2);
             Object value = parseValue(valueString);
-            map.put(key, value);
+
+            // FIXME не работает с Map
+            Map<String, Object> currentMap = deque.peek();
+            if (currentMap.containsKey(key)) {
+                if (currentMap.get(key) instanceof Map) {
+                    Map<String, Object> nestedMap = (Map<String, Object>) currentMap.get(key);
+                    deque.push(nestedMap);
+                } else {
+                    Map<String, Object> nestedMap = new HashMap<>();
+                    if (currentMap.get(key) instanceof List) {
+                        ((List<Object>) currentMap.get(key)).add(nestedMap);
+                    } else {
+                        currentMap.put(key, nestedMap);
+                    }
+                    deque.push(nestedMap);
+                }
+            } else {
+                currentMap.put(key, value);
+            }
+
+            if (value instanceof Map) {
+                deque.push((Map<String, Object>) value);
+            }
         }
 
         return map;
     }
+
 
     private static Object parseValue(String valueString) {
 
@@ -156,12 +177,12 @@ public class JsonConverter {
         } else if (valueString.startsWith("{") && valueString.endsWith("}")) {
             return parseToMap(valueString);
         } else if (valueString.startsWith("[") && valueString.endsWith("]")) {
-            return parseToList(valueString);
+            return parseList(valueString);
         }
         return valueString.trim();
     }
 
-    private static List<Object> parseToList(String arrayString) {
+    private static List<Object> parseList(String arrayString) {
         List<Object> list = new ArrayList<>();
         String content = arrayString.substring(1, arrayString.length() - 1);
         Matcher matcher = Pattern.compile("(\\{.*?\\}|\".*?\"|\\d+)").matcher(content);
